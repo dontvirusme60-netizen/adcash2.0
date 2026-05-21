@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>adcash</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: #09090b; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-box { text-align: center; padding: 40px; background: #18181b; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 80%; max-width: 400px; }
+        button { padding: 15px 30px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; background: #3f3f46; color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="loginScreen" class="login-box">
+        <h1>adcash</h1>
+        <p>Play, Watch, Earn.</p>
+        <div id="googleButtonContainer"></div>
+        <button onclick="App.login('Guest', 'guest_' + Date.now())">Play as Guest</button>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(
+            'https://keisjwsabisklnhktage.supabase.co', 
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlaXNqd3NhYmlza2xuaGt0YWdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTAzODgsImV4cCI6MjA5NDkyNjM4OH0.xoP2LGuFwDhBuoVAZHxnWZnb3ofQoM0js9F2HfN7OYo'
+        );
+
+        // App Logic
+        const App = {
+            async login(name, uid) {
+                try {
+                    let { data, error } = await supabase.from('users').select('*').eq('id', uid).single();
+                    if (!data) {
+                        await supabase.from('users').insert([{ id: uid, name: name, balance: 0 }]);
+                    }
+                    alert("Connected! Welcome " + name);
+                    document.getElementById('loginScreen').style.display = 'none';
+                } catch (e) {
+                    alert("Error: " + e.message);
+                }
+            }
+        };
+
+        // Initialize Google
+        window.onload = function () {
+            google.accounts.id.initialize({
+                client_id: "860223561459-pmg888canu0vmaipe3d05d1th3g4f6lt.apps.googleusercontent.com",
+                callback: (res) => {
+                    const p = JSON.parse(atob(res.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+                    App.login(p.name, p.sub);
+                }
+            });
+            google.accounts.id.renderButton(document.getElementById("googleButtonContainer"), { theme: "filled_black", size: "large" });
+        };
+    </script>
+</body>
+</html>
