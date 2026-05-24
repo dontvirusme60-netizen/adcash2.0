@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>adcash - Play & Earn</title>
+    
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            alert("APP CRASH: " + message + "\nLine: " + lineno);
+            return true;
+        };
+    </script>
+
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* Modern App Variables */
+        :root { --bg: #09090b; --surface: rgba(24, 24, 27, 0.7); --primary: #6366f1; --secondary: #ec4899; --accent: #10b981; --text: #f8fafc; --text-dim: #94a3b8; --border: rgba(255, 255, 255, 0.08); --radius-sm: 12px; --radius-md: 20px; --nav-height: 75px; }
+        
+        /* Themes */
+        body.theme-hacker { --bg: #020617; --primary: #10b981; --secondary: #059669; --surface: rgba(2, 44, 34, 0.6); }
+        body.theme-neon { --bg: #1c0924; --primary: #ec4899; --secondary: #a855f7; --accent: #f472b6; --surface: rgba(45, 15, 35, 0.6); }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        body { font-family: 'Outfit', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; overflow-x: hidden; transition: background 0.5s; }
+        #particles { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
+        .ambient-glow { position: fixed; border-radius: 50%; filter: blur(100px); opacity: 0.4; pointer-events: none; z-index: -1; }
+        .glow-1 { top: -10vw; left: -10vw; width: 50vw; height: 50vw; background: var(--primary); }
+        .glow-2 { bottom: -10vw; right: -10vw; width: 40vw; height: 40vw; background: var(--secondary); }
+        
+        h1, h2, h3 { margin: 0 0 10px 0; font-weight: 800; }
+        p { color: var(--text-dim); margin: 0 0 15px 0; font-size: 15px; }
+        .gradient-text { background: linear-gradient(135deg, #a855f7, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .gold-text { background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast { background: rgba(24, 24, 27, 0.9); border: 1px solid var(--border); padding: 15px 20px; border-radius: var(--radius-sm); font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .toast.hide { opacity: 0; transition: 0.4s; }
+        
+        header { width: 100%; max-width: 800px; margin: 0 auto; padding: 20px; display: flex; justify-content: space-between; align-items: flex-start; background: linear-gradient(180deg, var(--bg) 0%, transparent 100%); position: sticky; top: 0; z-index: 90; }
+        .user-profile { display: flex; align-items: center; gap: 12px; }
+        .avatar { width: 45px; height: 45px; border-radius: 12px; background: var(--surface); display: flex; justify-content: center; align-items: center; font-size: 24px; border: 2px solid var(--border); }
+        .title-tag { font-size: 10px; background: var(--primary); padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+        .xp-bar-container { width: 120px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 5px; overflow: hidden; }
+        .xp-bar-fill { height: 100%; background: var(--primary); width: 0%; transition: width 1s; }
+        .balance-card { background: var(--surface); border: 1px solid var(--border); padding: 10px 15px; border-radius: var(--radius-sm); text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+        .balance-amount { font-size: 20px; font-weight: 800; color: var(--accent); }
+        .support-link { background: rgba(255,255,255,0.1); color: var(--text-dim); text-decoration: none; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; display: flex; align-items: center; gap: 4px; transition: 0.2s; }
+        .support-link:active { background: var(--primary); color: white; }
+
+        nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; height: var(--nav-height); background: rgba(24, 24, 27, 0.85); backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--text-dim); font-size: 9px; font-weight: 600; cursor: pointer; transition: 0.3s; padding: 10px 0; }
+        .nav-item .icon { font-size: 20px; transition: transform 0.3s; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item.active .icon { transform: translateY(-3px) scale(1.1); }
+        
+        #appContainer { display: none; width: 100%; flex-direction: column; padding-bottom: 100px; }
+        .section { display: none; width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .section.active { display: block; }
+        .panel { background: var(--surface); border: 1px solid var(--border); padding: 25px; border-radius: var(--radius-md); margin-bottom: 20px; text-align: center; }
+        
+        .task-list { display: flex; flex-direction: column; gap: 12px; }
+        .task-item { background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 15px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; text-align: left; }
+        .task-btn { background: var(--primary); border: none; color: white; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        
+        .ad-player { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: var(--radius-sm); display: flex; justify-content: center; align-items: center; border: 1px solid var(--border); margin-bottom: 20px; }
+        .timer-huge { font-size: 64px; font-weight: 800; color: var(--primary); }
+        
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .card { background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius-sm); text-align: center; }
+        .card-price { font-size: 18px; font-weight: 800; color: var(--accent); margin-bottom: 15px; }
+        .btn-full { width: 100%; padding: 12px; border-radius: 8px; font-weight: 600; font-family: inherit; border: none; cursor: pointer; background: rgba(255,255,255,0.1); color: white; margin-bottom: 10px; }
+        .btn-full.buy { background: var(--primary); }
+        .btn-full:disabled { opacity: 0.5; cursor: not-allowed; background: rgba(255,255,255,0.05); }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.3s; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { background: var(--surface); padding: 30px; border-radius: var(--radius-md); border: 1px solid var(--border); text-align: center; width: 90%; max-width: 350px; }
+        
+        /* ENHANCED SPIN WHEEL */
+        .wheel-container { position: relative; width: 250px; height: 250px; margin: 0 auto 20px; border-radius: 50%; box-shadow: 0 0 20px rgba(0,0,0,0.4); border: 2px solid var(--border); }
+        .wheel { width: 100%; height: 100%; border-radius: 50%; border: 4px solid var(--border); background: conic-gradient(#ec4899 0 60deg, #8b5cf6 60deg 120deg, #3b82f6 120deg 180deg, #10b981 180deg 240deg, #f59e0b 240deg 300deg, #ef4444 300deg 360deg); transition: transform 4s cubic-bezier(0.1, 2.7, 0.2, 1); position: relative; box-shadow: inset 0 0 15px rgba(0,0,0,0.4); }
+        
+        /* Central Hub Cap */
+        .wheel::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35px; height: 35px; background: var(--surface); border: 3px solid var(--border); border-radius: 50%; z-index: 5; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        
+        /* Internal Slices Dividers */
+        .wheel::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(transparent 0 59.75deg, rgba(255,255,255,0.1) 59.75deg 60.25deg, transparent 60.25deg 119.75deg, rgba(255,255,255,0.1) 119.75deg 120.25deg, transparent 120.25deg 179.75deg, rgba(255,255,255,0.1) 179.75deg 180.25deg, transparent 180.25deg 239.75deg, rgba(255,255,255,0.1) 239.75deg 240.25deg, transparent 240.25deg 299.75deg, rgba(255,255,255,0.1) 299.75deg 300.25deg, transparent 300.25deg 359.75deg, rgba(255,255,255,0.1) 359.75deg 360deg); pointer-events: none; }
+        
+        /* More Detailed Pointer */
+        .wheel-pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 25px solid var(--text); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); z-index: 10; pointer-events: none; }
+        
+        /* CORRECTED LABELS ALIGNMENT */
+        .wheel-label { position: absolute; top: 50%; left: 50%; width: 50%; height: 20px; margin-top: -10px; transform-origin: 0 50%; display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; font-weight: 800; font-size: 16px; color: white; text-shadow: 1px 1px 3px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,0.9); }
+        
+        #loginScreen { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; z-index: 2000; background: var(--bg); }
+        .login-box { text-align: center; padding: 40px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); }
+        .guest-btn { margin-top: 20px; background: transparent; border: 1px solid var(--border); color: var(--text-dim); padding: 10px 20px; border-radius: 8px; cursor: pointer; width: 100%; font-family: inherit; }
+
+        /* CHATBOT UI */
+        #chatbotFab { position: fixed; bottom: 95px; right: 20px; width: 50px; height: 50px; border-radius: 50%; background: var(--primary); display: flex; justify-content: center; align-items: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 100; transition: 0.2s; }
+        #chatbotFab:active { transform: scale(0.9); }
+        #chatWindow { position: fixed; bottom: 160px; right: 20px; width: 300px; height: 350px; background: rgba(24, 24, 27, 0.95); border: 1px solid var(--border); border-radius: var(--radius-md); display: none; flex-direction: column; z-index: 100; overflow: hidden; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #chatWindow.active { display: flex; }
+        .chat-header { background: rgba(0,0,0,0.5); padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        .chat-body { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 13px; scroll-behavior: smooth; }
+        .chat-bubble { max-width: 85%; padding: 10px 15px; border-radius: 15px; line-height: 1.4; white-space: pre-wrap; }
+        .chat-bot { background: rgba(255,255,255,0.1); align-self: flex-start; border-bottom-left-radius: 2px; }
+        .chat-user { background: var(--primary); align-self: flex-end; border-bottom-right-radius: 2px; color: white; }
+        .chat-input-area { display: flex; padding: 10px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.3); }
+        .chat-input { flex: 1; background: transparent; border: none; color: white; outline: none; font-family: inherit; }
+        .chat-send { background: transparent; border: none; color: var(--primary); font-weight: bold; cursor: pointer; font-size: 18px; }
+        
+        /* Typing Indicator Animation */
+        .typing-dots::after { content: ''; animation: dots 1.5s steps(4, end) infinite; }
+        @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60%, 100% { content: '...'; } }
+    </style>
+</head>
+<body>
+
+    <canvas id="particles"></canvas>
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div id="toastContainer"></div>
+
+    <div id="wheelModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="gradient-text">Daily Spin</h2>
+            <div class="wheel-container">
+                <div class="wheel-pointer"></div>
+                <div id="wheelElement" class="wheel">
+                    <div class="wheel-label" style="transform: rotate(-60deg);">10</div>
+                    <div class="wheel-label" style="transform: rotate(0deg);">20</div>
+                    <div class="wheel-label" style="transform: rotate(60deg);">50</div>
+                    <div class="wheel-label" style="transform: rotate(120deg);">100</div>
+                    <div class="wheel-label" style="transform: rotate(180deg);">500</div>
+                    <div class="wheel-label" style="transform: rotate(240deg);">VIP</div>
+                </div>
+            </div>
+            <button class="btn-full buy" id="spinBtn" onclick="App.spinWheel()">SPIN NOW (50 Pts)</button>
+            <button class="btn-full" onclick="document.getElementById('wheelModal').classList.remove('active')">Close</button>
+        </div>
+    </div>
+
+    <div id="dailyModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="gold-text">Daily Reward 🎁</h2>
+            <div style="font-size: 60px; margin: 20px 0;">💰</div>
+            <button class="btn-full buy" onclick="App.claimDaily()">Claim 50 Pts</button>
+            <button class="btn-full" onclick="document.getElementById('dailyModal').classList.remove('active')">Close</button>
+        </div>
+    </div>
+
+    <div id="surveyModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="gradient-text" id="surveyModalTitle">Survey Question</h2>
+            <p style="margin-bottom: 25px;">Which platform do you prefer for gaming?</p>
+            <button class="btn-full buy" onclick="App.completeSurvey()">PC Master Race</button>
+            <button class="btn-full buy" onclick="App.completeSurvey()" style="background: var(--secondary);">Consoles</button>
+            <button class="btn-full buy" onclick="App.completeSurvey()" style="background: var(--accent);">Mobile Gaming</button>
+            <button class="btn-full" style="margin-top: 15px;" onclick="document.getElementById('surveyModal').classList.remove('active')">Cancel</button>
+        </div>
+    </div>
+
+    <div id="loginScreen">
+        <div class="login-box">
+            <h1 class="gradient-text" style="font-size: 42px;">adcash</h1>
+            <p>Play, Watch, Earn.</p>
+            <div id="googleButtonContainer" style="margin: 20px 0; min-height: 40px; display:flex; justify-content:center;"></div>
+            <div style="color: var(--text-dim); font-size: 12px;">— OR —</div>
+            <button class="guest-btn" onclick="App.login('Guest', 'guest_' + Date.now())">Play as Guest</button>
+        </div>
+    </div>
+
+    <div id="appContainer">
+        
+        <header>
+            <div class="user-profile">
+                <div class="avatar" id="uiAvatar">😎</div>
+                <div class="user-info">
+                    <h3><span id="uiName">Guest</span> <span class="title-tag" id="uiTitle">Beginner</span></h3>
+                    <div class="xp-bar-container"><div class="xp-bar-fill" id="uiXpBar"></div></div>
+                    <span class="xp-text">Lvl <span id="uiLevel">1</span> (<span id="uiXp">0</span>/100)</span>
+                </div>
+            </div>
+            <div class="balance-card">
+                <a href="mailto:freeadsupport@gmail.com" class="support-link">🎧 Support</a>
+                <div class="balance-amount"><span id="uiBalance">0</span></div>
+            </div>
+        </header>
+
+        <main id="tab-home" class="section active">
+            <div class="panel" style="display: flex; gap: 10px; padding: 15px;">
+                <button class="btn-full buy" style="margin:0;" onclick="document.getElementById('wheelModal').classList.add('active')">🎰 Spin Wheel</button>
+                <button class="btn-full" style="margin:0;" onclick="document.getElementById('dailyModal').classList.add('active')">🎁 Daily Reward</button>
+            </div>
+            <h2 style="margin-top: 10px; text-align: left;">Daily Tasks</h2>
+            <div class="task-list" id="taskListUI" style="margin-bottom: 20px;"></div>
+            
+            <div class="panel">
+                <h2 class="gradient-text">🎯 Aim Trainer</h2>
+                <div id="aimGameArea" style="width: 100%; height: 200px; background: rgba(0,0,0,0.4); border-radius: var(--radius-sm); border: 1px solid var(--border); position: relative; overflow: hidden; touch-action: none;">
+                    <button id="startAimBtn" class="btn-full buy" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: auto;" onclick="App.startAimGame()">Start Game</button>
+                </div>
+                <p id="aimScore" style="margin-top: 15px; font-weight: bold; color: var(--accent); font-size: 16px;">Score: 0</p>
+            </div>
+        </main>
+
+        <main id="tab-surveys" class="section">
+            <div class="panel"><h2>📝 Paid Surveys</h2><p>Share your opinions, complete quick polls, and earn massive point rewards!</p></div>
+            <div class="task-list" id="surveyListUI" style="margin-top: 20px;"></div>
+        </main>
+
+        <main id="tab-ads" class="section">
+            <div class="panel">
+                <h2>Watch & Earn</h2>
+                <div class="ad-player"><div style="text-align: center;"><span id="adStateText">Ready to watch</span><br><span id="adTimer" class="timer-huge" style="display:none;">30</span></div></div>
+                <p id="adWarning" style="color: #ef4444; font-weight: bold; display: none;">⚠️ Return to tab!</p>
+                <button id="btnStartAd" class="btn-full buy" style="padding: 18px;" onclick="App.startAd()">Start Ad</button>
+                <button id="btnClaimAd" class="btn-full" style="background: var(--accent); padding: 18px; display: none;" onclick="App.claimAd()">Claim Reward</button>
+            </div>
+        </main>
+
+        <main id="tab-vip" class="section">
+            <div id="vipLocked" class="panel"><h1 class="gradient-text" style="font-size: 28px;">🔒 Access Denied</h1><p>Buy VIP Star Badge in Skins to unlock.</p></div>
+            <div id="vipUnlocked" style="display: none; width: 100%; flex-direction: column; align-items: center;">
+                <div class="panel"><h1 class="gold-text" style="font-size: 32px;">Welcome, VIP!</h1></div>
+                <div class="panel" style="margin-top: 20px;"><h2 class="gradient-text">⚡ x2 Earnings Boost</h2><div id="boostTimerDisplay" style="font-size: 48px; font-weight: 700; color: var(--accent); margin: 15px 0; display: none;">10:00</div><button id="boostBtn" class="btn-full buy" style="background: var(--accent);" onclick="App.activateBoost()">Activate 10-Min Boost</button></div>
+            </div>
+        </main>
+
+        <main id="tab-cosmetics" class="section">
+            <div class="panel"><h2>Skins & Goals</h2><p>Ads Watched: <strong style="color: var(--accent); font-size: 18px;" id="totalAds">0</strong></p></div>
+            <div class="grid">
+                <div class="card"><h4>Golden Balance</h4><p style="font-size: 12px; margin-bottom: 10px; color: var(--text-dim);">Goal: Watch 3 Ads</p>
+                    <div class="xp-bar-container" style="width: 100%; margin-bottom: 15px;"><div class="xp-bar-fill" id="prog-gold"></div></div>
+                    <button class="btn-full" id="btn-gold" onclick="App.equipCosmetic('gold')" disabled>Locked</button></div>
+                <div class="card"><h4>Hacker Theme</h4><p style="font-size: 12px; margin-bottom: 10px; color: var(--text-dim);">Goal: Watch 5 Ads</p>
+                    <div class="xp-bar-container" style="width: 100%; margin-bottom: 15px;"><div class="xp-bar-fill" id="prog-hacker"></div></div>
+                    <button class="btn-full" id="btn-hacker" onclick="App.equipCosmetic('hacker')" disabled>Locked</button></div>
+                <div class="card"><h4 class="gradient-text">Neon Theme</h4><p style="font-size: 12px; margin-bottom: 10px; color: var(--text-dim);">Goal: Level 5</p>
+                    <div class="xp-bar-container" style="width: 100%; margin-bottom: 15px;"><div class="xp-bar-fill" id="prog-neon"></div></div>
+                    <button class="btn-full" id="btn-neon" onclick="App.equipCosmetic('neon')" disabled>Locked</button></div>
+                <div class="card" style="border-color: rgba(96, 165, 250, 0.3);"><h4 style="color: #60a5fa;">💎 Diamond Avatar</h4>
+                    <div class="card-price">2,000 Pts</div><button class="btn-full buy" onclick="App.buyAvatar(2000, '💎')">Buy</button></div>
+                <div class="card" style="border-color: rgba(236, 72, 153, 0.3);"><h4 class="gradient-text">VIP Badge</h4><p style="font-size: 12px; margin-bottom: 10px; color: var(--text-dim);">Unlocks VIP</p>
+                    <div class="card-price">1,500 Pts</div><button class="btn-full" id="buyVipBtn" style="border: 1px solid var(--secondary); color: var(--secondary);" onclick="App.buyCosmetic(1500, 'vip')">Buy</button></div>
+                <div class="card"><h4>Default Theme</h4><div style="flex-grow: 1;"></div><button class="btn-full" onclick="App.equipCosmetic('default')">Equip</button></div>
+            </div>
+        </main>
+
+        <main id="tab-store" class="section">
+            <div class="panel"><h2>Store</h2></div>
+            <div class="grid">
+                <div class="card"><h4>$5 Amazon</h4><div class="card-price">5,000 Pts</div><button class="btn-full buy" onclick="App.buyItem('Amazon $5', 5000)">Redeem</button></div>
+                <div class="card"><h4>$10 Steam</h4><div class="card-price">10,000 Pts</div><button class="btn-full buy" onclick="App.buyItem('Steam $10', 10000)">Redeem</button></div>
+            </div>
+        </main>
+
+        <main id="tab-leaderboard" class="section">
+            <div id="top5BoostPanel" class="panel" style="display: none; border-color: #fbbf24; box-shadow: 0 4px 15px rgba(251, 191, 36, 0.1);">
+                <h3 class="gold-text">👑 Top 5 Exclusive Boost</h3>
+                <p>You are in the Top 5! Activate a 15-minute 2x Points Boost. (Once per 24h)</p>
+                <div id="top5BoostTimer" style="font-size: 24px; font-weight: 800; margin: 15px 0; display: none;"></div>
+                <button id="btnTop5Boost" class="btn-full buy" onclick="App.activateTop5Boost()">Activate 2X Boost</button>
+            </div>
+            
+            <div class="panel"><h2 class="gold-text">🏆 Leaderboard</h2><div class="task-list" id="leaderboardList" style="margin-top: 20px;"></div></div>
+        </main>
+
+        <div id="chatbotFab" onclick="App.Chatbot.toggle()">🤖</div>
+        <div id="chatWindow">
+            <div class="chat-header">
+                <span>🤖 adcash AI</span>
+                <span style="cursor:pointer;" onclick="App.Chatbot.toggle()">✖</span>
+            </div>
+            <div class="chat-body" id="chatBody">
+                <div class="chat-bubble chat-bot">Hello! I am the adcash AI assistant powered by Gemini. How can I help? / שלום! איך אפשר לעזור?</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" class="chat-input" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') App.Chatbot.send()">
+                <button class="chat-send" onclick="App.Chatbot.send()">➤</button>
+            </div>
+        </div>
+
+        <nav id="bottomNav">
+            <div class="nav-item active" onclick="App.switchTab('home', this)"><div class="icon">🏠</div>Home</div>
+            <div class="nav-item" onclick="App.switchTab('surveys', this)"><div class="icon">📋</div>Surveys</div>
+            <div class="nav-item" onclick="App.switchTab('ads', this)"><div class="icon">📺</div>Ads</div>
+            <div class="nav-item" onclick="App.switchTab('vip', this)"><div class="icon">🌟</div>VIP</div>
+            <div class="nav-item" onclick="App.switchTab('cosmetics', this)"><div class="icon">🎨</div>Skins</div>
+            <div class="nav-item" onclick="App.switchTab('store', this)"><div class="icon">💳</div>Store</div>
+            <div class="nav-item" onclick="App.switchTab('leaderboard', this)"><div class="icon">🏆</div>Ranks</div>
+        </nav>
+    </div>
+
+    <script>
+        /** AUDIO ENGINE **/
+        const AudioEngine = {
+            ctx: null, init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+            playTone(freq, type, duration, vol=0.1) {
+                if(!this.ctx) return; if(this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.type = type; osc.frequency.value = freq; osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); gain.gain.setValueAtTime(vol, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.00001, this.ctx.currentTime + duration);
+                setTimeout(() => osc.stop(), duration * 1000);
+            },
+            click() { this.playTone(600, 'sine', 0.1, 0.05); },
+            success() { this.playTone(400, 'sine', 0.1, 0.1); setTimeout(() => this.playTone(600, 'sine', 0.2, 0.1), 100); },
+            levelUp() { [300, 400, 500, 600, 800].forEach((f, i) => setTimeout(() => this.playTone(f, 'square', 0.2, 0.1), i*100)); },
+            error() { this.playTone(150, 'sawtooth', 0.3, 0.1); }
+        };
+
+        /** SUPABASE CONNECTION **/
+        let dbClient = null;
+        try {
+            if (window.supabase) {
+                dbClient = window.supabase.createClient('https://keisjwsabisklnhktage.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlaXNqd3NhYmlza2xuaGt0YWdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTAzODgsImV4cCI6MjA5NDkyNjM4OH0.xoP2LGuFwDhBuoVAZHxnWZnb3ofQoM0js9F2HfN7OYo');
+            }
+        } catch (e) { console.error("Database connection failed", e); }
+
+        const DB = {
+            uid: null,
+            async load(uid, name) {
+                this.uid = uid; if (!dbClient) return this.defaultData(uid, name);
+                try {
+                    let { data, error } = await dbClient.from('users').select('*').eq('id', uid).single();
+                    if (data) { if (typeof data.tasks === 'string') data.tasks = JSON.parse(data.tasks); return data; }
+                    const newProfile = this.defaultData(uid, name);
+                    await dbClient.from('users').insert([newProfile]);
+                    return newProfile;
+                } catch(e) { return this.defaultData(uid, name); }
+            },
+            async save(data) {
+                if (!dbClient) return;
+                try { await dbClient.from('users').update({ balance: data.balance, xp: data.xp, level: data.level, theme: data.theme, avatar: data.avatar, title: data.title, adsWatched: data.adsWatched, lastDaily: data.lastDaily, vip: data.vip, tasks: data.tasks, lastTop5Boost: data.lastTop5Boost }).eq('id', this.uid); } catch(e) { console.error("Save failed", e); }
+            },
+            defaultData(uid, name) { return { id: uid, name: name || 'Guest', balance: 0, xp: 0, level: 1, theme: 'default', avatar: '😎', title: 'Beginner', adsWatched: 0, lastDaily: '', vip: false, lastTop5Boost: 0, tasks: [{ id: 1, desc: "Watch 3 Ads", target: 3, progress: 0, reward: 50, done: false }] }; }
+        };
+
+        /** APP LOGIC **/
+        const App = {
+            state: null, uid: null, name: null, isBoostActive: false, boostInterval: null, currentSurveyId: null, wheelRotations: 0,
+            top5BoostActive: false, top5Interval: null,
+            
+            surveys: [
+                { id: 1, title: "Your Gaming Habits", time: "1 Min", reward: 150, done: false },
+                { id: 2, title: "Hardware Preferences", time: "3 Min", reward: 300, done: false },
+                { id: 3, title: "Snack & Drink Poll", time: "2 Min", reward: 250, done: false }
+            ],
+
+            // --- REAL AI CHATBOT INTEGRATION WITH APP KNOWLEDGE & LANGUAGES ---
+            Chatbot: {
+                apiKey: 'AIzaSyAhLZBFgV3ShAe8HP2zi3NxvleL4sFdHp0',
+
+                toggle() { AudioEngine.click(); document.getElementById('chatWindow').classList.toggle('active'); },
+                
+                async send() {
+                    const input = document.getElementById('chatInput');
+                    const text = input.value.trim();
+                    if(!text) return;
+                    
+                    this.addMsg(text, 'user');
+                    input.value = '';
+                    
+                    const typingId = 'typing_' + Date.now();
+                    this.addMsg('...', 'bot', typingId);
+                    document.getElementById(typingId).classList.add('typing-dots');
+
+                    try {
+                        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                system_instruction: {
+                                    parts: [{
+                                        text: "You are the official AI assistant for 'adcash', a play-and-earn web app. App Rules: 1. Balance & XP: Users earn points to buy Gift Cards (Amazon $5=5000pts, Steam $10=10000pts). 2. Spin Wheel: Costs 50pts. Prizes: 10, 20, 50, 100, 500, VIP. 3. Daily Reward: 50pts. 4. Surveys: Give 150-300pts + 50XP. 5. Ads: 30-sec timer, gives 5pts + 10XP. 6. VIP: Costs 1500pts, unlocks 2x earning boost. 7. Leaderboard: Top 5 players get a 15-minute 2x boost (24h cooldown). 8. Cosmetics: Themes unlocked via ads/leveling. Diamond avatar costs 2000pts. RULE: You MUST answer in the same language the user speaks. You are programmed to support the 20 most popular languages globally AND explicitly Hebrew (עברית). Keep responses strictly to 1 or 2 short sentences. Be helpful and enthusiastic."
+                                    }]
+                                },
+                                contents: [{
+                                    role: "user",
+                                    parts: [{ text: text }]
+                                }]
+                            })
+                        });
+
+                        const data = await response.json();
+                        
+                        if (data.candidates && data.candidates[0].content.parts[0].text) {
+                            this.updateMsg(typingId, data.candidates[0].content.parts[0].text);
+                            AudioEngine.playTone(800, 'sine', 0.1, 0.02);
+                        } else {
+                            this.updateMsg(typingId, "I'm having trouble processing that right now. / יש לי בעיה בעיבוד הבקשה כרגע.");
+                        }
+                    } catch (error) {
+                        console.error("AI Fetch Error:", error);
+                        this.updateMsg(typingId, "Connection error to AI servers. / שגיאת חיבור לשרתי ה-AI.");
+                    }
+                },
+                addMsg(text, sender, id = null) {
+                    const body = document.getElementById('chatBody');
+                    const div = document.createElement('div');
+                    div.className = `chat-bubble chat-${sender}`;
+                    if (id) div.id = id;
+                    div.innerText = text;
+                    body.appendChild(div);
+                    body.scrollTop = body.scrollHeight;
+                },
+                updateMsg(id, text) {
+                    const div = document.getElementById(id);
+                    if (div) {
+                        div.classList.remove('typing-dots');
+                        div.innerText = text;
+                        const body = document.getElementById('chatBody');
+                        body.scrollTop = body.scrollHeight;
+                    }
+                }
+            },
+
+            async login(name, uid) {
+                AudioEngine.init(); AudioEngine.click(); this.name = name; this.uid = uid;
+                this.state = await DB.load(uid, name);
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'flex';
+                this.equipCosmetic(this.state.theme);
+                this.updateUI(); this.renderTasks(); this.renderSurveys(); initParticles();
+                this.toast(`Welcome back, ${name.split(' ')[0]}!`, '👋');
+            },
+            async addPoints(amount, reason) {
+                this.animateNumber('uiBalance', this.state.balance, this.state.balance + amount);
+                this.state.balance += amount; this.toast(`+${amount} Pts (${reason})`, '💰');
+                AudioEngine.success(); await DB.save(this.state); this.updateUI();
+            },
+            async addXP(amount) {
+                this.state.xp += amount; let xpNeeded = Math.floor(100 * Math.pow(this.state.level, 1.5));
+                if (this.state.xp >= xpNeeded) { this.state.level++; this.state.xp -= xpNeeded; this.updateTitle(); AudioEngine.levelUp(); this.toast(`Level Up! You are now Level ${this.state.level}`, '⭐'); triggerConfetti(); }
+                await DB.save(this.state); this.updateUI();
+            },
+            updateTitle() { let l = this.state.level; this.state.title = l>=20 ? "Legend" : l>=10 ? "Expert" : l>=5 ? "Pro" : "Beginner"; },
+            updateUI() {
+                document.getElementById('uiName').innerText = this.name.split(' ')[0]; document.getElementById('uiBalance').innerText = this.state.balance.toLocaleString();
+                document.getElementById('uiLevel').innerText = this.state.level; document.getElementById('uiXp').innerText = this.state.xp;
+                document.getElementById('uiTitle').innerText = (this.state.vip ? '🌟 ' : '') + this.state.title; document.getElementById('uiAvatar').innerText = this.state.avatar;
+                let xpNeeded = Math.floor(100 * Math.pow(this.state.level, 1.5)); document.getElementById('uiXpBar').style.width = `${(this.state.xp / xpNeeded) * 100}%`;
+                document.getElementById('totalAds').innerText = this.state.adsWatched; this.checkGoals(); this.updateVipArea();
+            },
+            toast(msg, icon='') {
+                const c = document.getElementById('toastContainer'); const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<span>${icon}</span> <div>${msg}</div>`;
+                c.appendChild(t); setTimeout(() => { t.classList.add('hide'); setTimeout(() => t.remove(), 400); }, 3000);
+            },
+            switchTab(tabId, btn) {
+                AudioEngine.click(); document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active')); document.getElementById('tab-' + tabId).classList.add('active');
+                if(tabId !== 'ads' && this.adInterval) { clearInterval(this.adInterval); document.getElementById('adWarning').style.display = 'block'; }
+                if(tabId === 'leaderboard') this.loadLeaderboard();
+            },
+            animateNumber(id, start, end) {
+                const obj = document.getElementById(id); if (!obj) return;
+                let cur = start; const step = Math.ceil((end - start) / 20) || 1;
+                const tmr = setInterval(() => { cur += step; if(cur >= end) { cur = end; clearInterval(tmr); } obj.innerText = cur.toLocaleString(); }, 30);
+            },
+            
+            // --- LEADERBOARD & TOP 5 LOGIC ---
+            async loadLeaderboard() {
+                const list = document.getElementById('leaderboardList'); list.innerHTML = '<p>Loading ranks...</p>';
+                if(!dbClient) { list.innerHTML = '<p>Database connection blocked.</p>'; return; }
+                try {
+                    let { data, error } = await dbClient.from('users').select('id, name, balance, level, avatar, vip').order('balance', { ascending: false }).limit(20);
+                    if (error) throw error; 
+                    list.innerHTML = '';
+                    let isTop5 = false;
+                    data.forEach((u, i) => {
+                        let rank = i + 1; 
+                        if (u.id === this.uid && rank <= 5) isTop5 = true;
+                        let c = rank === 1 ? 'color: #fbbf24;' : rank === 2 ? 'color: #94a3b8;' : rank === 3 ? 'color: #b45309;' : 'color: var(--text-dim);';
+                        let icon = rank <= 5 ? '👑 ' : '';
+                        list.innerHTML += `<div class="task-item" style="display: flex; align-items: center; gap: 15px; padding: 12px 15px;"><h3 style="${c} margin:0; width:25px; text-align:center;">${icon}#${rank}</h3><div class="avatar" style="width:35px; height:35px; font-size:18px;">${u.avatar}</div><div style="flex-grow: 1;"><h4 style="margin:0; font-size: 14px;">${u.name.split(' ')[0]} ${u.vip?'🌟':''}</h4><span style="font-size: 10px; color: var(--text-dim);">Level ${u.level}</span></div><div style="font-weight: 800; color: var(--accent);">${u.balance.toLocaleString()}</div></div>`;
+                    });
+                    this.updateTop5UI(isTop5);
+                } catch (e) { list.innerHTML = '<p style="color:#ef4444;">Failed to load leaderboard.</p>'; }
+            },
+            updateTop5UI(isTop5) {
+                const panel = document.getElementById('top5BoostPanel');
+                const btn = document.getElementById('btnTop5Boost');
+                const timerDiv = document.getElementById('top5BoostTimer');
+                
+                if (isTop5) {
+                    panel.style.display = 'block';
+                    const now = Date.now();
+                    const last = this.state.lastTop5Boost || 0;
+                    const cooldownMs = 24 * 60 * 60 * 1000;
+                    
+                    if (this.top5BoostActive) {
+                        btn.style.display = 'none';
+                        timerDiv.style.display = 'block';
+                        timerDiv.style.color = 'var(--accent)';
+                    } else if (now - last < cooldownMs) {
+                        btn.style.display = 'block';
+                        btn.disabled = true;
+                        btn.innerText = "Cooldown Active";
+                        let left = cooldownMs - (now - last);
+                        let h = Math.floor(left / 3600000);
+                        let m = Math.floor((left % 3600000) / 60000);
+                        timerDiv.style.display = 'block';
+                        timerDiv.style.color = 'var(--text-dim)';
+                        timerDiv.innerText = `Available in ${h}h ${m}m`;
+                    } else {
+                        btn.style.display = 'block';
+                        btn.disabled = false;
+                        btn.innerText = "Activate 2X Boost (15m)";
+                        timerDiv.style.display = 'none';
+                    }
+                } else {
+                    panel.style.display = 'none';
+                }
+            },
+            activateTop5Boost() {
+                if(this.top5BoostActive) return;
+                AudioEngine.success();
+                this.top5BoostActive = true;
+                this.state.lastTop5Boost = Date.now();
+                DB.save(this.state);
+                this.toast("👑 Top 5 Boost Activated! 2X Points for 15m!", "🔥");
+                
+                let timeLeft = 15 * 60;
+                const btn = document.getElementById('btnTop5Boost');
+                if(btn) btn.style.display = 'none';
+                const timerDiv = document.getElementById('top5BoostTimer');
+                if(timerDiv) {
+                    timerDiv.style.display = 'block';
+                    timerDiv.style.color = 'var(--accent)';
+                }
+
+                this.top5Interval = setInterval(() => {
+                    timeLeft--;
+                    let m = Math.floor(timeLeft / 60);
+                    let s = timeLeft % 60;
+                    if(timerDiv && this.top5BoostActive) timerDiv.innerText = `🔥 Boost Active: ${m}:${s < 10 ? '0' : ''}${s}`;
+                    if(timeLeft <= 0) {
+                        clearInterval(this.top5Interval);
+                        this.top5BoostActive = false;
+                        if(timerDiv) timerDiv.innerText = "Boost Ended.";
+                        this.loadLeaderboard();
+                    }
+                }, 1000);
+            },
+
+            updateVipArea() {
+                if (this.state.vip) { document.getElementById('vipLocked').style.display = 'none'; document.getElementById('vipUnlocked').style.display = 'flex'; } 
+                else { document.getElementById('vipLocked').style.display = 'block'; document.getElementById('vipUnlocked').style.display = 'none'; }
+            },
+            activateBoost() {
+                if(this.isBoostActive) return; this.isBoostActive = true; this.toast("⚡ x2 Boost Activated!", "🔥"); AudioEngine.success();
+                const btn = document.getElementById('boostBtn'); const display = document.getElementById('boostTimerDisplay'); btn.style.display = 'none'; display.style.display = 'block';
+                let timeLeft = 10 * 60;
+                this.boostInterval = setInterval(() => { timeLeft--; let m = Math.floor(timeLeft / 60); let s = timeLeft % 60; display.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+                    if(timeLeft <= 0) { clearInterval(this.boostInterval); this.isBoostActive = false; display.innerText = "Boost Ended"; btn.style.display = 'block'; }
+                }, 1000);
+            },
+            
+            checkGoals() {
+                let goldProgress = Math.min((this.state.adsWatched / 3) * 100, 100); document.getElementById('prog-gold').style.width = goldProgress + '%';
+                if (this.state.adsWatched >= 3) { let btn = document.getElementById('btn-gold'); if(btn){ btn.disabled = false; btn.innerText = "Equip"; } }
+                
+                let hackerProgress = Math.min((this.state.adsWatched / 5) * 100, 100); document.getElementById('prog-hacker').style.width = hackerProgress + '%';
+                if (this.state.adsWatched >= 5) { let btn = document.getElementById('btn-hacker'); if(btn){ btn.disabled = false; btn.innerText = "Equip"; } }
+                
+                let neonProgress = Math.min((this.state.level / 5) * 100, 100); document.getElementById('prog-neon').style.width = neonProgress + '%';
+                if (this.state.level >= 5) { let btn = document.getElementById('btn-neon'); if(btn){ btn.disabled = false; btn.innerText = "Equip"; } }
+            },
+            buyCosmetic(cost, id) {
+                AudioEngine.click(); if (id === 'vip' && this.state.vip) return this.toast("Already owned!", "✔️");
+                if (this.state.balance >= cost) { this.state.balance -= cost; if (id === 'vip') { this.state.vip = true; this.toast("VIP Unlocked! 🌟", "🎉"); this.equipCosmetic('vip'); this.updateVipArea(); } DB.save(this.state); this.updateUI(); } else { AudioEngine.error(); this.toast("Not enough points!", "❌"); }
+            },
+            buyAvatar(cost, icon) {
+                AudioEngine.click();
+                if (this.state.balance >= cost) {
+                    this.state.balance -= cost;
+                    this.state.avatar = icon;
+                    this.toast("New Avatar Equipped!", "💎");
+                    DB.save(this.state);
+                    this.updateUI();
+                } else { AudioEngine.error(); this.toast("Not enough points!", "❌"); }
+            },
+            equipCosmetic(id) {
+                document.body.classList.remove('theme-hacker', 'theme-neon'); 
+                document.querySelector('.balance-amount').classList.remove('gold-text');
+                if (id === 'gold') document.querySelector('.balance-amount').classList.add('gold-text'); 
+                else if (id === 'hacker') document.body.classList.add('theme-hacker');
+                else if (id === 'neon') document.body.classList.add('theme-neon');
+                
+                this.state.theme = id;
+                DB.save(this.state);
+                AudioEngine.success(); this.toast("Cosmetic Equipped!", "🎨");
+            },
+            buyItem(name, cost) { AudioEngine.click(); if(this.state.balance >= cost) { this.state.balance -= cost; this.toast(`Purchased ${name}`, '🛍️'); AudioEngine.success(); DB.save(this.state); this.updateUI(); } else { AudioEngine.error(); this.toast("Not enough points!", '❌'); } },
+            claimDaily() {
+                AudioEngine.click(); const now = new Date().toDateString();
+                if(this.state.lastDaily !== now) { this.state.lastDaily = now; this.addPoints(50, 'Daily Reward'); this.addXP(20); document.getElementById('dailyModal').classList.remove('active'); } else { this.toast("Already claimed today!", "⏳"); AudioEngine.error(); }
+            },
+            
+            // --- DEBUFFED SPIN LOGIC ---
+            spinWheel() {
+                AudioEngine.click(); 
+                if(this.state.balance < 50) return this.toast("Costs 50 pts to spin", "❌");
+                this.state.balance -= 50; this.updateUI(); 
+                
+                const wheel = document.getElementById('wheelElement'); 
+                const btn = document.getElementById('spinBtn'); 
+                btn.disabled = true;
+
+                // Heavily Debuffed Weights (Total = 100%)
+                const prizes = [10, 20, 50, 100, 500, 'VIP'];
+                const weights = [60, 25, 10, 4, 0.99, 0.01]; 
+                
+                let rand = Math.random() * 100;
+                let selectedIndex = 0;
+                let cumulative = 0;
+                for(let i = 0; i < weights.length; i++) {
+                    cumulative += weights[i];
+                    if(rand <= cumulative) { selectedIndex = i; break; }
+                }
+
+                const targetAngles = [330, 270, 210, 150, 90, 30];
+                const baseSpins = 1440; 
+                const currentMod = this.wheelRotations % 360;
+                const spinTo = this.wheelRotations + (baseSpins - currentMod) + targetAngles[selectedIndex];
+                this.wheelRotations = spinTo;
+
+                wheel.style.transform = `rotate(${spinTo}deg)`;
+                
+                setTimeout(() => { 
+                    btn.disabled = false; 
+                    const winAmount = prizes[selectedIndex];
+                    
+                    if (winAmount === 'VIP') {
+                        this.state.vip = true;
+                        this.toast("🎰 JACKPOT! YOU WON VIP! 🌟", "👑");
+                        this.updateVipArea();
+                        triggerConfetti();
+                        DB.save(this.state);
+                    } else {
+                        this.addPoints(winAmount, "Spin Win"); 
+                        if(winAmount >= 100) triggerConfetti(); 
+                    }
+                }, 4000);
+            },
+            
+            renderSurveys() {
+                const list = document.getElementById('surveyListUI'); if(!list) return; list.innerHTML = '';
+                this.surveys.forEach(s => {
+                    list.innerHTML += `<div class="task-item" style="opacity: ${s.done ? 0.5 : 1}"><div class="task-info"><h4 class="gradient-text">${s.title}</h4><span style="font-size: 11px; color: var(--text-dim)">⏱️ ${s.time}</span></div>${s.done ? '<span style="color: var(--accent)">Done ✅</span>' : `<button class="task-btn" onclick="App.startSurvey(${s.id})">${s.reward} Pts</button>`}</div>`;
+                });
+            },
+            startSurvey(id) {
+                AudioEngine.click(); let s = this.surveys.find(x => x.id === id);
+                if(s && !s.done) { this.currentSurveyId = id; document.getElementById('surveyModalTitle').innerText = s.title; document.getElementById('surveyModal').classList.add('active'); }
+            },
+            completeSurvey() {
+                AudioEngine.click(); let s = this.surveys.find(x => x.id === this.currentSurveyId);
+                if(s && !s.done) { 
+                    s.done = true; document.getElementById('surveyModal').classList.remove('active'); 
+                    let multiplier = 1;
+                    if (this.isBoostActive) multiplier *= 2;
+                    if (this.top5BoostActive) multiplier *= 2;
+                    
+                    this.addPoints(s.reward * multiplier, "Survey Completed"); 
+                    this.addXP(50); this.renderSurveys(); this.toast("Survey answers submitted!", "📊"); 
+                }
+            },
+
+            adTime: 30, adInterval: null,
+            startAd() {
+                AudioEngine.click(); document.getElementById('btnStartAd').style.display = 'none'; document.getElementById('adTimer').style.display = 'block'; document.getElementById('adStateText').innerText = "Ad Playing..."; document.getElementById('adWarning').style.display = 'none';
+                this.adTime = 30; document.getElementById('adTimer').innerText = this.adTime;
+                this.adInterval = setInterval(() => {
+                    if(document.visibilityState === 'visible') {
+                        this.adTime--; document.getElementById('adTimer').innerText = this.adTime; document.getElementById('adWarning').style.display = 'none';
+                        if(this.adTime <= 0) { clearInterval(this.adInterval); document.getElementById('adTimer').style.display = 'none'; document.getElementById('adStateText').innerText = "Finished!"; document.getElementById('btnClaimAd').style.display = 'block'; }
+                    } else { document.getElementById('adWarning').style.display = 'block'; }
+                }, 1000);
+            },
+            claimAd() { 
+                AudioEngine.click(); document.getElementById('btnClaimAd').style.display = 'none'; document.getElementById('btnStartAd').style.display = 'block'; document.getElementById('adStateText').innerText = "Ready to watch"; 
+                
+                let pointsEarned = 5; 
+                if (this.isBoostActive) pointsEarned *= 2;
+                if (this.top5BoostActive) pointsEarned *= 2;
+                
+                this.state.adsWatched++; this.addPoints(pointsEarned, "Watched Ad"); this.addXP(10); this.progressTask(1, 1); this.checkGoals(); 
+            },
+            
+            aimScore: 0, aimActive: false, aimTimer: null,
+            startAimGame() {
+                AudioEngine.click(); this.aimScore = 0; this.aimActive = true; const area = document.getElementById('aimGameArea'); area.innerHTML = ''; this.spawnAimTarget();
+                let timeLeft = 10; document.getElementById('aimScore').innerText = `Time: ${timeLeft}s | Score: ${this.aimScore}`;
+                this.aimTimer = setInterval(() => {
+                    timeLeft--; if(this.aimActive) document.getElementById('aimScore').innerText = `Time: ${timeLeft}s | Score: ${this.aimScore}`;
+                    if (timeLeft <= 0) { clearInterval(this.aimTimer); this.aimActive = false; area.innerHTML = `<button class="btn-full buy" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: auto;" onclick="App.startAimGame()">Play Again</button>`; document.getElementById('aimScore').innerText = `Time's Up! Final Score: ${this.aimScore}`; AudioEngine.success(); }
+                }, 1000);
+            },
+            spawnAimTarget() {
+                if (!this.aimActive) return; const area = document.getElementById('aimGameArea'); area.innerHTML = '';
+                const t = document.createElement('div'); const s = 45; t.style.position = 'absolute'; t.style.left = (Math.random() * (area.clientWidth - s)) + 'px'; t.style.top = (Math.random() * (area.clientHeight - s)) + 'px'; t.style.width = s + 'px'; t.style.height = s + 'px'; t.style.background = 'radial-gradient(circle, var(--secondary) 0%, #be185d 100%)'; t.style.borderRadius = '50%'; t.style.cursor = 'pointer'; t.style.boxShadow = '0 0 15px var(--secondary)';
+                const hit = (e) => { e.preventDefault(); if(!this.aimActive) return; AudioEngine.playTone(800, 'sine', 0.1, 0.05); this.aimScore++; document.getElementById('aimScore').innerText = `Time: ${document.getElementById('aimScore').innerText.split(':')[1].split('s')[0]}s | Score: ${this.aimScore}`; this.spawnAimTarget(); };
+                t.onmousedown = hit; t.ontouchstart = hit; area.appendChild(t);
+            },
+            
+            renderTasks() {
+                const list = document.getElementById('taskListUI'); if(!list) return; list.innerHTML = '';
+                this.state.tasks.forEach(t => { const pct = Math.min(100, (t.progress / t.target) * 100); list.innerHTML += `<div class="task-item" style="opacity: ${t.done ? 0.5 : 1}"><div class="task-info"><h4>${t.desc}</h4><div class="xp-bar-container" style="width: 100px; height: 4px;"><div class="xp-bar-fill" style="width: ${pct}%"></div></div><span style="font-size: 11px; color: var(--text-dim)">${t.progress}/${t.target}</span></div>${t.done ? '<span style="color: var(--accent)">Done ✅</span>' : (t.progress >= t.target ? `<button class="task-btn" onclick="App.claimTask(${t.id})">Claim</button>` : `<span class="task-reward">${t.reward} Pts</span>`)}</div>`; });
+            },
+            progressTask(id, amt) { let t = this.state.tasks.find(x => x.id === id); if(t && !t.done && t.progress < t.target) { t.progress += amt; DB.save(this.state); this.renderTasks(); if(t.progress >= t.target) { AudioEngine.success(); this.toast(`Task Complete: ${t.desc}!`, "🏆"); } } },
+            claimTask(id) { AudioEngine.click(); let t = this.state.tasks.find(x => x.id === id); if(t && !t.done && t.progress >= t.target) { t.done = true; this.addPoints(t.reward, "Task"); this.addXP(20); this.renderTasks(); } }
+        };
+
+        /** GOOGLE INIT **/
+        window.onload = function () {
+            if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                google.accounts.id.initialize({
+                    client_id: "860223561459-pmg888canu0vmaipe3d05d1th3g4f6lt.apps.googleusercontent.com",
+                    callback: (response) => {
+                        var base64Url = response.credential.split('.')[1]; var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                        var payload = JSON.parse(decodeURIComponent(window.atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+                        App.login(payload.name, payload.sub);
+                    }
+                });
+                google.accounts.id.renderButton(document.getElementById("googleButtonContainer"), { theme: "filled_black", size: "large", type: "standard", shape: "pill" });
+            } else {
+                document.getElementById('googleButtonContainer').innerHTML = "<p style='color:red; font-size:12px;'>Google login blocked by browser. Please use Guest.</p>";
+            }
+        };
+
+        function initParticles() { const c = document.getElementById('particles'); const ctx = c.getContext('2d', { alpha: false }); let w, h, p = []; function resize() { w = c.width = window.innerWidth; h = c.height = window.innerHeight; } window.addEventListener('resize', resize); resize(); for(let i=0; i<30; i++) { p.push({ x: Math.random() * w, y: Math.random() * h, s: Math.random() * 2, sy: -0.5 - Math.random() * 1, o: Math.random() * 0.5 }); } function animate() { ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg') || '#09090b'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = "rgba(255,255,255,1)"; p.forEach(pt => { pt.y += pt.sy; if(pt.y < 0) { pt.y = h; pt.x = Math.random() * w; } ctx.globalAlpha = pt.o; ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.s, 0, Math.PI*2); ctx.fill(); }); ctx.globalAlpha = 1; requestAnimationFrame(animate); } animate(); }
+        function triggerConfetti() { for(let i=0; i<20; i++) { let el = document.createElement('div'); el.style.position = 'fixed'; el.style.top = '50%'; el.style.left = '50%'; el.style.width = '10px'; el.style.height = '10px'; el.style.zIndex = '9999'; el.style.backgroundColor = ['#ec4899', '#3b82f6', '#10b981', '#f59e0b'][Math.floor(Math.random()*4)]; let a = Math.random() * Math.PI * 2; let v = 50 + Math.random() * 100; let tx = Math.cos(a) * v; let ty = Math.sin(a) * v - 100; el.animate([ { transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${tx}px, ${ty}px) scale(0)`, opacity: 0 } ], { duration: 800 + Math.random()*500, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' }); document.body.appendChild(el); setTimeout(() => el.remove(), 1500); } }
+    </script>
+</body>
+</html>
