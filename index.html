@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>adcash - Play & Earn</title>
+    
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            alert("APP CRASH: " + message + "\nLine: " + lineno);
+            return true;
+        };
+    </script>
+
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* Modern App Variables */
+        :root { --bg: #09090b; --surface: rgba(24, 24, 27, 0.7); --primary: #6366f1; --secondary: #ec4899; --accent: #10b981; --text: #f8fafc; --text-dim: #94a3b8; --border: rgba(255, 255, 255, 0.08); --radius-sm: 12px; --radius-md: 20px; --nav-height: 75px; }
+        body.theme-hacker { --bg: #020617; --primary: #10b981; --secondary: #059669; --surface: rgba(2, 44, 34, 0.6); }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        body { font-family: 'Outfit', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; overflow-x: hidden; transition: background 0.5s; }
+        #particles { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
+        .ambient-glow { position: fixed; border-radius: 50%; filter: blur(100px); opacity: 0.4; pointer-events: none; z-index: -1; }
+        .glow-1 { top: -10vw; left: -10vw; width: 50vw; height: 50vw; background: var(--primary); }
+        .glow-2 { bottom: -10vw; right: -10vw; width: 40vw; height: 40vw; background: var(--secondary); }
+        
+        h1, h2, h3 { margin: 0 0 10px 0; font-weight: 800; }
+        p { color: var(--text-dim); margin: 0 0 15px 0; font-size: 15px; }
+        .gradient-text { background: linear-gradient(135deg, #a855f7, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .gold-text { background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast { background: rgba(24, 24, 27, 0.9); border: 1px solid var(--border); padding: 15px 20px; border-radius: var(--radius-sm); font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .toast.hide { opacity: 0; transition: 0.4s; }
+        
+        header { width: 100%; max-width: 800px; margin: 0 auto; padding: 20px; display: flex; justify-content: space-between; align-items: flex-start; background: linear-gradient(180deg, var(--bg) 0%, transparent 100%); position: sticky; top: 0; z-index: 90; }
+        .user-profile { display: flex; align-items: center; gap: 12px; }
+        .avatar { width: 45px; height: 45px; border-radius: 12px; background: var(--surface); display: flex; justify-content: center; align-items: center; font-size: 24px; border: 2px solid var(--border); }
+        .title-tag { font-size: 10px; background: var(--primary); padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+        .xp-bar-container { width: 120px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 5px; overflow: hidden; }
+        .xp-bar-fill { height: 100%; background: var(--primary); width: 0%; transition: width 1s; }
+        .balance-card { background: var(--surface); border: 1px solid var(--border); padding: 10px 15px; border-radius: var(--radius-sm); text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+        .balance-amount { font-size: 20px; font-weight: 800; color: var(--accent); }
+        .support-link { background: rgba(255,255,255,0.1); color: var(--text-dim); text-decoration: none; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; display: flex; align-items: center; gap: 4px; transition: 0.2s; }
+        .support-link:active { background: var(--primary); color: white; }
+
+        nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; height: var(--nav-height); background: rgba(24, 24, 27, 0.85); backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--text-dim); font-size: 9px; font-weight: 600; cursor: pointer; transition: 0.3s; padding: 10px 0; }
+        .nav-item .icon { font-size: 20px; transition: transform 0.3s; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item.active .icon { transform: translateY(-3px) scale(1.1); }
+        
+        #appContainer { display: none; width: 100%; flex-direction: column; padding-bottom: 100px; }
+        .section { display: none; width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .section.active { display: block; }
+        .panel { background: var(--surface); border: 1px solid var(--border); padding: 25px; border-radius: var(--radius-md); margin-bottom: 20px; text-align: center; }
+        
+        .task-list { display: flex; flex-direction: column; gap: 12px; }
+        .task-item { background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 15px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; text-align: left; }
+        .task-btn { background: var(--primary); border: none; color: white; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        
+        .ad-player { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: var(--radius-sm); display: flex; justify-content: center; align-items: center; border: 1px solid var(--border); margin-bottom: 20px; }
+        .timer-huge { font-size: 64px; font-weight: 800; color: var(--primary); }
+        
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .card { background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius-sm); text-align: center; }
+        .card-price { font-size: 18px; font-weight: 800; color: var(--accent); margin-bottom: 15px; }
+        .btn-full { width: 100%; padding: 12px; border-radius: 8px; font-weight: 600; font-family: inherit; border: none; cursor: pointer; background: rgba(255,255,255,0.1); color: white; margin-bottom: 10px; }
+        .btn-full.buy { background: var(--primary); }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.3s; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { background: var(--surface); padding: 30px; border-radius: var(--radius-md); border: 1px solid var(--border); text-align: center; width: 90%; max-width: 350px; }
+        
+        /* Spin Wheel Upgrades */
+        .wheel-container { position: relative; width: 250px; height: 250px; margin: 0 auto 20px; }
+        .wheel { width: 100%; height: 100%; border-radius: 50%; border: 4px solid var(--border); background: conic-gradient(#ec4899 0 60deg, #8b5cf6 60deg 120deg, #3b82f6 120deg 180deg, #10b981 180deg 240deg, #f59e0b 240deg 300deg, #ef4444 300deg 360deg); transition: transform 4s cubic-bezier(0.1, 2.7, 0.2, 1); position: relative; }
+        .wheel-pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 25px solid white; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); z-index: 10; }
+        .wheel-label { position: absolute; top: 50%; left: 50%; width:
